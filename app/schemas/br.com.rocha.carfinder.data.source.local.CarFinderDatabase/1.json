@@ -1,0 +1,75 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "01db89b5d7242fd91847615b3fe0af0c",
+    "entities": [
+      {
+        "tableName": "car",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`vin` TEXT NOT NULL, `name` TEXT, `address` TEXT, `engineType` TEXT, `fuel` INTEGER NOT NULL, `exterior` TEXT, `interior` TEXT, `coordinates` TEXT, PRIMARY KEY(`vin`))",
+        "fields": [
+          {
+            "fieldPath": "mVin",
+            "columnName": "vin",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mName",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "mAddress",
+            "columnName": "address",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "mEngineType",
+            "columnName": "engineType",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "mFuel",
+            "columnName": "fuel",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mExterior",
+            "columnName": "exterior",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "mInterior",
+            "columnName": "interior",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "mCoordinates",
+            "columnName": "coordinates",
+            "affinity": "TEXT",
+            "notNull": false
+          }
+        ],
+        "primaryKey": {
+          "columnNames": [
+            "vin"
+          ],
+          "autoGenerate": false
+        },
+        "indices": [],
+        "foreignKeys": []
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, \"01db89b5d7242fd91847615b3fe0af0c\")"
+    ]
+  }
+}
