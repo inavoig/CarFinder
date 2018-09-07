@@ -17,4 +17,5 @@
     <string name="no_cars_found">No cars found</string>
     <string name="reload">Reload</string>
     <string name="error_loading_cars">Error loading cars</string>
+    <string name="error_loading_map">"Unfortunately we could not load \n the map this time"</string>
 </resources>

@@ -36,10 +36,10 @@ public class ImportCarsTask extends AsyncTask<Void, Void, Void> {
         StorageReference storageRef = FirebaseStorage.getInstance().getReference();
 
         try {
-            StorageReference storageReference = storageRef.child(FILE_LOCATIONS_JSON);
+            StorageReference locationsFileRef = storageRef.child(FILE_LOCATIONS_JSON);
             File destinationFile = new File(Environment.getExternalStoragePublicDirectory(
                     Environment.DIRECTORY_DOWNLOADS), FILE_LOCATIONS_JSON);
-            storageReference.getFile(destinationFile)
+            locationsFileRef.getFile(destinationFile)
                     .addOnSuccessListener(taskSnapshot ->
                             mLoadCarsCallback.onCarsLoaded(retrieveDownloadedData(destinationFile.getAbsolutePath())))
                     .addOnFailureListener(e -> mLoadCarsCallback.onDataNotAvailable());

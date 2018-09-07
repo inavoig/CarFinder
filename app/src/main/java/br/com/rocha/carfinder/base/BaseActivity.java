@@ -4,7 +4,9 @@ import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.content.pm.PackageManager;
 import android.os.Build;
+import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.annotation.VisibleForTesting;
 import android.support.design.widget.Snackbar;
 import android.support.test.espresso.IdlingResource;
@@ -23,6 +25,13 @@ public class BaseActivity extends AppCompatActivity implements BaseActivityListe
 
     private int mCountRequestPermission;
     private SparseArray<Runnable> mRequestPermission;
+
+    @Override
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        mRequestPermission = new SparseArray<>();
+    }
 
     @Override
     public void onRequestPermissionsResult(int requestCode,

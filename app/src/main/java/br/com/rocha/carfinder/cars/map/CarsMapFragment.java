@@ -3,14 +3,15 @@ package br.com.rocha.carfinder.cars.map;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
-import android.content.Context;
 import android.content.Intent;
+import android.content.IntentSender;
 import android.location.Location;
 import android.os.Bundle;
+import android.os.Looper;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.design.widget.Snackbar;
-import android.support.v4.app.Fragment;
+import android.support.v7.widget.CardView;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -18,7 +19,12 @@ import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.ProgressBar;
 
+import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -34,43 +40,35 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
-import br.com.rocha.carfinder.base.BaseActivityListener;
 import br.com.rocha.carfinder.R;
+import br.com.rocha.carfinder.base.BaseFragment;
 import br.com.rocha.carfinder.util.AnimUtils;
 import br.com.rocha.carfinder.util.GPSUtil;
 
-public class CarsMapFragment extends Fragment
-        implements CarsMapContract.View, OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks {
+public class CarsMapFragment extends BaseFragment
+        implements CarsMapContract.View, OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks,
+        GoogleApiClient.OnConnectionFailedListener, LocationListener {
 
     private static final int GPS_REQUEST_CODE = 1;
+    private static final int CONNECTION_FAILURE_RESOLUTION_REQUEST = 2;
 
     private ProgressBar mLoading;
     private FrameLayout mMapFrame;
+    private CardView mCvError;
 
     private SupportMapFragment mMapFragment;
     private GoogleMap mMap;
     private GoogleApiClient mGoogleApiClient;
     private Location mCurrentLocation;
+    private LocationRequest mLocationRequest;
 
     private CarsMapContract.Presenter mCarsMapPresenter;
-    private BaseActivityListener mBaseActivityListener;
 
     public CarsMapFragment() {
     }
 
     public static CarsMapFragment newInstance() {
         return new CarsMapFragment();
-    }
-
-    @Override
-    public void onAttach(Context context) {
-        super.onAttach(context);
-        try {
-            mBaseActivityListener = (BaseActivityListener) context;
-
-        } catch (Exception e) {
-            Log.e("LISTENER_ERROR", "BaseActivityListener must be implement", e);
-        }
     }
 
     @Override
@@ -90,6 +88,11 @@ public class CarsMapFragment extends Fragment
         if (mGoogleApiClient != null) {
             mGoogleApiClient.connect();
         }
+
+        mLocationRequest = LocationRequest.create()
+                .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
+                .setInterval(TimeUnit.SECONDS.toMillis(10))
+                .setFastestInterval(TimeUnit.SECONDS.toMillis(1));
     }
 
     @Override
@@ -113,6 +116,7 @@ public class CarsMapFragment extends Fragment
 
         mLoading = view.findViewById(R.id.loading);
         mMapFrame = view.findViewById(R.id.map);
+        mCvError = view.findViewById(R.id.cv_error);
 
         return view;
     }
@@ -137,10 +141,12 @@ public class CarsMapFragment extends Fragment
             if (mGoogleApiClient == null) {
                 mGoogleApiClient = new GoogleApiClient.Builder(getContext())
                         .addConnectionCallbacks(this)
-                        .addOnConnectionFailedListener(connectionResult ->
-                                Snackbar.make(Objects.requireNonNull(getView()),
-                                        R.string.failed_getting_updated_location,
-                                        Snackbar.LENGTH_LONG).show())
+                        .addOnConnectionFailedListener(connectionResult -> {
+                            AnimUtils.replaceView(mLoading, mCvError);
+                            Snackbar.make(Objects.requireNonNull(getView()),
+                                    R.string.failed_getting_updated_location,
+                                    Snackbar.LENGTH_LONG).show();
+                        })
                         .addApi(LocationServices.API)
                         .build();
             }
@@ -172,7 +178,7 @@ public class CarsMapFragment extends Fragment
                     Intent intent = new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS);
                     startActivityForResult(intent, GPS_REQUEST_CODE);
                 })
-                .setNegativeButton(R.string.no, (dialog, id) -> dialog.cancel());
+                .setNegativeButton(R.string.no, (dialog, id) -> AnimUtils.replaceView(mLoading, mCvError));
 
         builder.create().show();
     }
@@ -206,6 +212,26 @@ public class CarsMapFragment extends Fragment
                 Snackbar.LENGTH_LONG).show();
     }
 
+    @Override
+    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+        if (connectionResult.hasResolution()) {
+            try {
+                connectionResult.startResolutionForResult(getActivity(), CONNECTION_FAILURE_RESOLUTION_REQUEST);
+
+            } catch (IntentSender.SendIntentException e) {
+                Log.e("ERROR_MAP", "Error trying to repair connectivity", e);
+            }
+
+        } else {
+            AnimUtils.replaceView(mLoading, mCvError);
+        }
+    }
+
+    @Override
+    public void onLocationChanged(Location location) {
+        handleNewLocation(location);
+    }
+
     @SuppressLint("MissingPermission")
     private void setCurrentLocation() {
         if (getActivity() != null) {
@@ -216,13 +242,17 @@ public class CarsMapFragment extends Fragment
                                 if (location == null) {
                                     handleGetCurrentLocationError();
                                 } else {
-                                    mCurrentLocation = location;
-                                    setCurrentLocationOnMap();
+                                    handleNewLocation(location);
                                 }
                             })
                             .addOnFailureListener(getActivity(), e ->
                                     handleGetCurrentLocationError()), Manifest.permission.ACCESS_COARSE_LOCATION);
         }
+    }
+
+    private void handleNewLocation(Location location) {
+        mCurrentLocation = location;
+        setCurrentLocationOnMap();
     }
 
     private void setCurrentLocationOnMap() {
@@ -243,13 +273,16 @@ public class CarsMapFragment extends Fragment
         mMap.animateCamera(camUpd3);
     }
 
+    @SuppressLint("MissingPermission")
     private void handleGetCurrentLocationError() {
-        try {
-            Thread.sleep(TimeUnit.SECONDS.toMillis(1));
-            setCurrentLocation();
-
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        mBaseActivityListener.checkPermissionAndRun(() ->
+                LocationServices.getFusedLocationProviderClient(Objects.requireNonNull(getActivity()))
+                        .requestLocationUpdates(mLocationRequest, new LocationCallback() {
+                                    @Override
+                                    public void onLocationResult(LocationResult locationResult) {
+                                        onLocationChanged(locationResult.getLastLocation());
+                                    }
+                                },
+                                Looper.myLooper()));
     }
 }
